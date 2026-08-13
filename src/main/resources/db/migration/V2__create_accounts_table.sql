@@ -1,0 +1,9 @@
+CREATE TABLE accounts(
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(20) NOT NULL CHECK ( type IN ('CHEQUING', 'SAVINGS', 'CREDIT_CARD', 'CASH') ),
+    opening_balance NUMERIC(19, 2) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
+);

@@ -1,5 +1,6 @@
 package com.spsk1313.expensebudgeting.common;
 
+import com.spsk1313.expensebudgeting.account.exception.AccountNotFoundException;
 import com.spsk1313.expensebudgeting.common.dto.ApiErrorResponse;
 import com.spsk1313.expensebudgeting.user.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -53,5 +54,17 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(AccountNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccountNotFound(AccountNotFoundException ex) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                ex.getMessage(),
+                Map.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 }
