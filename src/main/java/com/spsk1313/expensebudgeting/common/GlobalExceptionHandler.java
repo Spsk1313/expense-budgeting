@@ -1,6 +1,7 @@
 package com.spsk1313.expensebudgeting.common;
 
 import com.spsk1313.expensebudgeting.account.exception.AccountNotFoundException;
+import com.spsk1313.expensebudgeting.budget.exception.DuplicateBudgetException;
 import com.spsk1313.expensebudgeting.category.exception.CategoryNotFoundException;
 import com.spsk1313.expensebudgeting.category.exception.DuplicateCategoryException;
 import com.spsk1313.expensebudgeting.common.dto.ApiErrorResponse;
@@ -119,5 +120,17 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(DuplicateBudgetException.class)
+    public ResponseEntity<ApiErrorResponse> handleDuplicateBudget(DuplicateBudgetException ex) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                ex.getMessage(),
+                Map.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 }
