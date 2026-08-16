@@ -10,3 +10,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+
+app:
+  recurring-transactions:
+    cron: 0 0 1 * * *
