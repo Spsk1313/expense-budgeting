@@ -6,6 +6,7 @@ import com.spsk1313.expensebudgeting.budget.exception.DuplicateBudgetException;
 import com.spsk1313.expensebudgeting.category.exception.CategoryNotFoundException;
 import com.spsk1313.expensebudgeting.category.exception.DuplicateCategoryException;
 import com.spsk1313.expensebudgeting.common.dto.ApiErrorResponse;
+import com.spsk1313.expensebudgeting.recurringtransaction.exception.RecurringTransactionNotFoundException;
 import com.spsk1313.expensebudgeting.transaction.exception.TransactionNotFoundException;
 import com.spsk1313.expensebudgeting.user.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -137,6 +138,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BudgetNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleBudgetNotFound(BudgetNotFoundException ex) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                ex.getMessage(),
+                Map.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(RecurringTransactionNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleRecurringTransactionNotFound(RecurringTransactionNotFoundException ex) {
         ApiErrorResponse response = new ApiErrorResponse(
                 HttpStatus.NOT_FOUND.value(),
                 HttpStatus.NOT_FOUND.getReasonPhrase(),
