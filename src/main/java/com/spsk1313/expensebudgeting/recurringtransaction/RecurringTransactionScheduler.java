@@ -16,7 +16,7 @@ public class RecurringTransactionScheduler {
         this.catchUpService = catchUpService;
     }
 
-    @Scheduled(cron = "app.recurring-transactions.cron")
+    @Scheduled(cron = "${app.recurring-transactions.cron}")
     public void processRecurringTransactions() {
         catchUpService.processDueTransactions(LocalDate.now());
     }
