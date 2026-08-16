@@ -9,28 +9,32 @@ import java.util.Optional;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
-    String FIND_BY_ID_AND_USER_ID = """
-            SELECT t
-                FROM Transaction t
-                WHERE t.id = :transactionId
-                AND (
-                t.account.user.id = :userId
-                OR t.sourceAccount.user.id = :userId
-                )
-            """;
-
-    String FIND_ALL_BY_USER_ID = """
+    @Query("""
             SELECT t
             FROM Transaction t
-            WHERE
-            t.account.user.id = :userId
-            OR t.sourceAccount.user.id = :userId
+            LEFT JOIN t.account a
+            LEFT JOIN t.sourceAccount sa
+            WHERE t.id = :transactionId
+              AND (
+                  a.user.id = :userId
+                  OR sa.user.id = :userId
+              )
+            """)
+    Optional<Transaction> findByIdAndUserId(
+            @Param("transactionId") Long transactionId,
+            @Param("userId") Long userId
+    );
+
+    @Query("""
+            SELECT t
+            FROM Transaction t
+            LEFT JOIN t.account a
+            LEFT JOIN t.sourceAccount sa
+            WHERE a.user.id = :userId
+               OR sa.user.id = :userId
             ORDER BY t.transactionDate DESC, t.id DESC
-            """;
-
-    @Query(FIND_BY_ID_AND_USER_ID)
-    Optional<Transaction> findByIdAndUserId(Long transactionId, Long userId);
-
-    @Query(FIND_ALL_BY_USER_ID)
-    List<Transaction> findAllByUserId(@Param("userId") Long userId);
+            """)
+    List<Transaction> findAllByUserId(
+            @Param("userId") Long userId
+    );
 }
