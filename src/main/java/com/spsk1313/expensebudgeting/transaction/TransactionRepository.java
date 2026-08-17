@@ -152,4 +152,25 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     AccountActivityTotalsProjection getActivityTotals(
             @Param("accountId") Long accountId
     );
+
+    @Query("""
+        SELECT t
+        FROM Transaction t
+        LEFT JOIN FETCH t.account a
+        LEFT JOIN FETCH t.sourceAccount sa
+        LEFT JOIN FETCH t.destinationAccount da
+        LEFT JOIN FETCH t.category c
+        WHERE (
+            a.user.id = :userId
+            OR sa.user.id = :userId
+        )
+        AND t.transactionDate >= :startDate
+        AND t.transactionDate < :endDate
+        ORDER BY t.transactionDate ASC, t.id ASC
+        """)
+    List<Transaction> findAllByUserIdAndDateRange(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 }
