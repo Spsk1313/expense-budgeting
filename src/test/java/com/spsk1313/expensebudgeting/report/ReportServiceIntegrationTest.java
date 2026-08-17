@@ -8,6 +8,7 @@ import com.spsk1313.expensebudgeting.budget.BudgetRepository;
 import com.spsk1313.expensebudgeting.category.Category;
 import com.spsk1313.expensebudgeting.category.CategoryRepository;
 import com.spsk1313.expensebudgeting.category.CategoryType;
+import com.spsk1313.expensebudgeting.report.dto.AccountBalanceResponse;
 import com.spsk1313.expensebudgeting.report.dto.BudgetStatusResponse;
 import com.spsk1313.expensebudgeting.transaction.Transaction;
 import com.spsk1313.expensebudgeting.transaction.TransactionRepository;
@@ -250,6 +251,169 @@ class ReportServiceIntegrationTest {
         );
 
         assertFalse(gymStatus.overspent());
+    }
+
+    @Test
+    void getAccountBalanceShouldIncludeIncomeExpensesAndTransfers() {
+
+        User user = userRepository.save(
+                new User("Sahil", "sahil@example.com")
+        );
+
+        Account chequing = accountRepository.save(
+                new Account(
+                        user,
+                        "Chequing",
+                        AccountType.CHEQUING,
+                        new BigDecimal("1000.00")
+                )
+        );
+
+        Account savings = accountRepository.save(
+                new Account(
+                        user,
+                        "Savings",
+                        AccountType.SAVINGS,
+                        new BigDecimal("500.00")
+                )
+        );
+
+        Category salary = categoryRepository.save(
+                new Category(
+                        user,
+                        "Salary",
+                        CategoryType.INCOME
+                )
+        );
+
+        Category groceries = categoryRepository.save(
+                new Category(
+                        user,
+                        "Groceries",
+                        CategoryType.EXPENSE
+                )
+        );
+
+        LocalDate date = LocalDate.of(2026, 8, 16);
+
+        // +2500 income
+        transactionRepository.save(
+                Transaction.createIncome(
+                        chequing,
+                        salary,
+                        new BigDecimal("2500.00"),
+                        "Salary",
+                        date
+                )
+        );
+
+        // -300 expense
+        transactionRepository.save(
+                Transaction.createExpense(
+                        chequing,
+                        groceries,
+                        new BigDecimal("300.00"),
+                        "Groceries",
+                        date
+                )
+        );
+
+        // -400 from chequing
+        transactionRepository.save(
+                Transaction.createTransfer(
+                        chequing,
+                        savings,
+                        new BigDecimal("400.00"),
+                        "Move to savings",
+                        date
+                )
+        );
+
+        // +100 into chequing
+        transactionRepository.save(
+                Transaction.createTransfer(
+                        savings,
+                        chequing,
+                        new BigDecimal("100.00"),
+                        "Move back to chequing",
+                        date
+                )
+        );
+
+        AccountBalanceResponse response =
+                reportService.getAccountBalance(
+                        user.getId(),
+                        chequing.getId()
+                );
+
+        assertEquals(chequing.getId(), response.accountId());
+        assertEquals("Chequing", response.accountName());
+
+        assertBigDecimalEquals(
+                "1000.00",
+                response.openingBalance()
+        );
+
+        assertBigDecimalEquals(
+                "2500.00",
+                response.totalIncome()
+        );
+
+        assertBigDecimalEquals(
+                "300.00",
+                response.totalExpenses()
+        );
+
+        assertBigDecimalEquals(
+                "100.00",
+                response.totalTransfersIn()
+        );
+
+        assertBigDecimalEquals(
+                "400.00",
+                response.totalTransfersOut()
+        );
+
+        assertBigDecimalEquals(
+                "2900.00",
+                response.currentBalance()
+        );
+
+        AccountBalanceResponse savingsResponse =
+                reportService.getAccountBalance(
+                        user.getId(),
+                        savings.getId()
+                );
+
+        assertBigDecimalEquals(
+                "500.00",
+                savingsResponse.openingBalance()
+        );
+
+        assertBigDecimalEquals(
+                "0",
+                savingsResponse.totalIncome()
+        );
+
+        assertBigDecimalEquals(
+                "0",
+                savingsResponse.totalExpenses()
+        );
+
+        assertBigDecimalEquals(
+                "400.00",
+                savingsResponse.totalTransfersIn()
+        );
+
+        assertBigDecimalEquals(
+                "100.00",
+                savingsResponse.totalTransfersOut()
+        );
+
+        assertBigDecimalEquals(
+                "800.00",
+                savingsResponse.currentBalance()
+        );
     }
 
     private BudgetStatusResponse findByCategory(

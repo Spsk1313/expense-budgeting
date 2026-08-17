@@ -1,5 +1,6 @@
 package com.spsk1313.expensebudgeting.transaction;
 
+import com.spsk1313.expensebudgeting.account.projection.AccountActivityTotalsProjection;
 import com.spsk1313.expensebudgeting.report.projection.CategorySpendingProjection;
 import com.spsk1313.expensebudgeting.report.projection.MonthlyTotalsProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -90,5 +91,65 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
+        SELECT
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN t.type = com.spsk1313.expensebudgeting.transaction.TransactionType.INCOME
+                             AND t.account.id = :accountId
+                        THEN t.amount
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS totalIncome,
+
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN t.type = com.spsk1313.expensebudgeting.transaction.TransactionType.EXPENSE
+                             AND t.account.id = :accountId
+                        THEN t.amount
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS totalExpenses,
+
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN t.type = com.spsk1313.expensebudgeting.transaction.TransactionType.TRANSFER
+                             AND t.destinationAccount.id = :accountId
+                        THEN t.amount
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS totalTransfersIn,
+
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN t.type = com.spsk1313.expensebudgeting.transaction.TransactionType.TRANSFER
+                             AND t.sourceAccount.id = :accountId
+                        THEN t.amount
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS totalTransfersOut
+
+        FROM Transaction t
+
+        WHERE t.account.id = :accountId
+           OR t.sourceAccount.id = :accountId
+           OR t.destinationAccount.id = :accountId
+        """)
+    AccountActivityTotalsProjection getActivityTotals(
+            @Param("accountId") Long accountId
     );
 }

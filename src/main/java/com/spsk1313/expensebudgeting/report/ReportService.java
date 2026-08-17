@@ -1,11 +1,12 @@
 package com.spsk1313.expensebudgeting.report;
 
+import com.spsk1313.expensebudgeting.account.Account;
+import com.spsk1313.expensebudgeting.account.AccountRepository;
+import com.spsk1313.expensebudgeting.account.exception.AccountNotFoundException;
+import com.spsk1313.expensebudgeting.account.projection.AccountActivityTotalsProjection;
 import com.spsk1313.expensebudgeting.budget.Budget;
 import com.spsk1313.expensebudgeting.budget.BudgetRepository;
-import com.spsk1313.expensebudgeting.report.dto.BudgetStatusResponse;
-import com.spsk1313.expensebudgeting.report.dto.CategorySpendingResponse;
-import com.spsk1313.expensebudgeting.report.dto.DateRangeSummaryResponse;
-import com.spsk1313.expensebudgeting.report.dto.MonthlySummaryResponse;
+import com.spsk1313.expensebudgeting.report.dto.*;
 import com.spsk1313.expensebudgeting.report.exception.InvalidDateRangeException;
 import com.spsk1313.expensebudgeting.report.projection.CategorySpendingProjection;
 import com.spsk1313.expensebudgeting.report.projection.MonthlyTotalsProjection;
@@ -28,11 +29,13 @@ import java.util.stream.Collectors;
 public class ReportService {
 
     private final UserRepository userRepository;
+    private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final BudgetRepository budgetRepository;
 
-    public ReportService(UserRepository userRepository, TransactionRepository transactionRepository, BudgetRepository budgetRepository) {
+    public ReportService(UserRepository userRepository, AccountRepository accountRepository, TransactionRepository transactionRepository, BudgetRepository budgetRepository) {
         this.userRepository = userRepository;
+        this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.budgetRepository = budgetRepository;
     }
@@ -176,6 +179,38 @@ public class ReportService {
                 totalIncome,
                 totalExpenses,
                 netCashFlow
+        );
+    }
+
+    public AccountBalanceResponse getAccountBalance(
+            Long userId,
+            Long accountId
+    ) {
+        validateUserExists(userId);
+
+        Account account = accountRepository
+                .findByIdAndUser_Id(accountId, userId)
+                .orElseThrow(() -> new AccountNotFoundException(accountId));
+
+        AccountActivityTotalsProjection totals =
+                transactionRepository.getActivityTotals(accountId);
+
+        BigDecimal currentBalance =
+                account.getOpeningBalance()
+                        .add(totals.getTotalIncome())
+                        .subtract(totals.getTotalExpenses())
+                        .add(totals.getTotalTransfersIn())
+                        .subtract(totals.getTotalTransfersOut());
+
+        return new AccountBalanceResponse(
+                account.getId(),
+                account.getName(),
+                account.getOpeningBalance(),
+                totals.getTotalIncome(),
+                totals.getTotalExpenses(),
+                totals.getTotalTransfersIn(),
+                totals.getTotalTransfersOut(),
+                currentBalance
         );
     }
 

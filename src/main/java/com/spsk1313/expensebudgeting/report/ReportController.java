@@ -1,9 +1,6 @@
 package com.spsk1313.expensebudgeting.report;
 
-import com.spsk1313.expensebudgeting.report.dto.BudgetStatusResponse;
-import com.spsk1313.expensebudgeting.report.dto.CategorySpendingResponse;
-import com.spsk1313.expensebudgeting.report.dto.DateRangeSummaryResponse;
-import com.spsk1313.expensebudgeting.report.dto.MonthlySummaryResponse;
+import com.spsk1313.expensebudgeting.report.dto.*;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -75,5 +72,15 @@ public class ReportController {
                 reportService.getDateRangeSummary(userId, from, to);
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/accounts/{accountId}/balance")
+    public ResponseEntity<AccountBalanceResponse> getAccountBalance(
+            @PathVariable Long userId,
+            @PathVariable Long accountId
+    ) {
+        return ResponseEntity.ok(
+                reportService.getAccountBalance(userId, accountId)
+        );
     }
 }
