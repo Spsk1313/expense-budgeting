@@ -1,0 +1,31 @@
+                                                                             QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=3519.33..3519.36 rows=11 width=258) (actual time=26.087..26.089 rows=8 loops=1)
+   Sort Key: (sum(t.amount)) DESC
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=11609
+   ->  GroupAggregate  (cost=3518.92..3519.14 rows=11 width=258) (actual time=25.833..26.004 rows=8 loops=1)
+         Group Key: c.id
+         Buffers: shared hit=11606
+         ->  Sort  (cost=3518.92..3518.95 rows=11 width=232) (actual time=25.795..25.854 rows=2353 loops=1)
+               Sort Key: c.id
+               Sort Method: quicksort  Memory: 200kB
+               Buffers: shared hit=11606
+               ->  Nested Loop  (cost=0.14..3518.73 rows=11 width=232) (actual time=0.071..25.382 rows=2353 loops=1)
+                     Buffers: shared hit=11603
+                     ->  Nested Loop  (cost=0.00..3516.72 rows=11 width=14) (actual time=0.061..23.909 rows=2353 loops=1)
+                           Join Filter: (a.id = t.account_id)
+                           Rows Removed by Join Filter: 7059
+                           Buffers: shared hit=6897
+                           ->  Seq Scan on accounts a  (cost=0.00..12.75 rows=1 width=8) (actual time=0.015..0.017 rows=4 loops=1)
+                                 Filter: (user_id = 1)
+                                 Buffers: shared hit=1
+                           ->  Seq Scan on transactions t  (cost=0.00..3474.00 rows=2398 width=22) (actual time=0.003..5.845 rows=2353 loops=4)
+                                 Filter: ((transaction_date >= '2026-08-01'::date) AND (transaction_date < '2026-09-01'::date) AND ((type)::text = 'EXPENSE'::text))
+                                 Rows Removed by Filter: 97647
+                                 Buffers: shared hit=6896
+                     ->  Index Scan using categories_pkey on categories c  (cost=0.14..0.18 rows=1 width=226) (actual time=0.000..0.000 rows=1 loops=2353)
+                           Index Cond: (id = t.category_id)
+                           Buffers: shared hit=4706
+ Planning:
+   Buffers: shared hit=81
