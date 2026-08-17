@@ -7,6 +7,7 @@ import com.spsk1313.expensebudgeting.category.exception.CategoryNotFoundExceptio
 import com.spsk1313.expensebudgeting.category.exception.DuplicateCategoryException;
 import com.spsk1313.expensebudgeting.common.dto.ApiErrorResponse;
 import com.spsk1313.expensebudgeting.recurringtransaction.exception.RecurringTransactionNotFoundException;
+import com.spsk1313.expensebudgeting.report.exception.InvalidDateRangeException;
 import com.spsk1313.expensebudgeting.transaction.exception.TransactionNotFoundException;
 import com.spsk1313.expensebudgeting.user.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -158,5 +159,21 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(InvalidDateRangeException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidDateRange(
+            InvalidDateRangeException ex
+    ) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                ex.getMessage(),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(response);
     }
 }

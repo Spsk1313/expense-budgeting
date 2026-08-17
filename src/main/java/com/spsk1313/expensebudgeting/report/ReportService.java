@@ -1,0 +1,222 @@
+package com.spsk1313.expensebudgeting.report;
+
+import com.spsk1313.expensebudgeting.account.Account;
+import com.spsk1313.expensebudgeting.account.AccountRepository;
+import com.spsk1313.expensebudgeting.account.exception.AccountNotFoundException;
+import com.spsk1313.expensebudgeting.account.projection.AccountActivityTotalsProjection;
+import com.spsk1313.expensebudgeting.budget.Budget;
+import com.spsk1313.expensebudgeting.budget.BudgetRepository;
+import com.spsk1313.expensebudgeting.report.dto.*;
+import com.spsk1313.expensebudgeting.report.exception.InvalidDateRangeException;
+import com.spsk1313.expensebudgeting.report.projection.CategorySpendingProjection;
+import com.spsk1313.expensebudgeting.report.projection.MonthlyTotalsProjection;
+import com.spsk1313.expensebudgeting.transaction.TransactionRepository;
+import com.spsk1313.expensebudgeting.user.UserRepository;
+import com.spsk1313.expensebudgeting.user.exception.UserNotFoundException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional(readOnly = true)
+public class ReportService {
+
+    private final UserRepository userRepository;
+    private final AccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
+    private final BudgetRepository budgetRepository;
+
+    public ReportService(UserRepository userRepository, AccountRepository accountRepository, TransactionRepository transactionRepository, BudgetRepository budgetRepository) {
+        this.userRepository = userRepository;
+        this.accountRepository = accountRepository;
+        this.transactionRepository = transactionRepository;
+        this.budgetRepository = budgetRepository;
+    }
+
+    public MonthlySummaryResponse getMonthlySummary(Long userId, YearMonth month) {
+        validateUserExists(userId);
+        LocalDate startDate = month.atDay(1);
+        LocalDate endDate = month.plusMonths(1).atDay(1);
+
+        MonthlyTotalsProjection totals = transactionRepository.getTotalsByDateRange(userId, startDate, endDate);
+
+        BigDecimal totalIncome = totals.getTotalIncome();
+        BigDecimal totalExpenses = totals.getTotalExpenses();
+        BigDecimal netCashFlow = totalIncome.subtract(totalExpenses);
+
+        return new MonthlySummaryResponse(
+                month,
+                totalIncome,
+                totalExpenses,
+                netCashFlow
+        );
+
+    }
+
+    public List<CategorySpendingResponse> getCategorySpending(
+            Long userId,
+            YearMonth month
+    ) {
+        validateUserExists(userId);
+
+        LocalDate startDate = month.atDay(1);
+        LocalDate endDate = month.plusMonths(1).atDay(1);
+
+        return transactionRepository
+                .getCategorySpending(userId, startDate, endDate)
+                .stream()
+                .map(projection -> new CategorySpendingResponse(
+                        projection.getCategoryId(),
+                        projection.getCategoryName(),
+                        projection.getTotalAmount()
+                ))
+                .toList();
+    }
+
+    public List<BudgetStatusResponse> getBudgetStatus(
+            Long userId,
+            YearMonth month
+    ) {
+        validateUserExists(userId);
+
+        List<Budget> budgets =
+                budgetRepository.findAllByUser_IdAndMonth(userId, month);
+
+        LocalDate startDate = month.atDay(1);
+        LocalDate endDate = month.plusMonths(1).atDay(1);
+
+        List<CategorySpendingProjection> categorySpending =
+                transactionRepository.getCategorySpending(
+                        userId,
+                        startDate,
+                        endDate
+                );
+
+        Map<Long, BigDecimal> spentByCategory =
+                categorySpending.stream()
+                        .collect(Collectors.toMap(
+                                CategorySpendingProjection::getCategoryId,
+                                CategorySpendingProjection::getTotalAmount
+                        ));
+
+        return budgets.stream()
+                .map(budget -> {
+                    BigDecimal limitAmount =
+                            budget.getLimitAmount();
+
+                    BigDecimal spentAmount =
+                            spentByCategory.getOrDefault(
+                                    budget.getCategory().getId(),
+                                    BigDecimal.ZERO
+                            );
+
+                    BigDecimal remainingAmount =
+                            limitAmount.subtract(spentAmount);
+
+                    BigDecimal percentageUsed =
+                            spentAmount
+                                    .multiply(BigDecimal.valueOf(100))
+                                    .divide(
+                                            limitAmount,
+                                            2,
+                                            RoundingMode.HALF_UP
+                                    );
+
+                    boolean overspent =
+                            spentAmount.compareTo(limitAmount) > 0;
+
+                    return new BudgetStatusResponse(
+                            budget.getId(),
+                            budget.getCategory().getId(),
+                            budget.getCategory().getName(),
+                            budget.getMonth(),
+                            limitAmount,
+                            spentAmount,
+                            remainingAmount,
+                            percentageUsed,
+                            overspent
+                    );
+                })
+                .toList();
+    }
+
+    public DateRangeSummaryResponse getDateRangeSummary(
+            Long userId,
+            LocalDate from,
+            LocalDate to
+    ) {
+        validateUserExists(userId);
+
+        if (from.isAfter(to)) {
+            throw new InvalidDateRangeException();
+        }
+
+        LocalDate endExclusive = to.plusDays(1);
+
+        MonthlyTotalsProjection totals =
+                transactionRepository.getTotalsByDateRange(
+                        userId,
+                        from,
+                        endExclusive
+                );
+
+        BigDecimal totalIncome = totals.getTotalIncome();
+        BigDecimal totalExpenses = totals.getTotalExpenses();
+
+        BigDecimal netCashFlow =
+                totalIncome.subtract(totalExpenses);
+
+        return new DateRangeSummaryResponse(
+                from,
+                to,
+                totalIncome,
+                totalExpenses,
+                netCashFlow
+        );
+    }
+
+    public AccountBalanceResponse getAccountBalance(
+            Long userId,
+            Long accountId
+    ) {
+        validateUserExists(userId);
+
+        Account account = accountRepository
+                .findByIdAndUser_Id(accountId, userId)
+                .orElseThrow(() -> new AccountNotFoundException(accountId));
+
+        AccountActivityTotalsProjection totals =
+                transactionRepository.getActivityTotals(accountId);
+
+        BigDecimal currentBalance =
+                account.getOpeningBalance()
+                        .add(totals.getTotalIncome())
+                        .subtract(totals.getTotalExpenses())
+                        .add(totals.getTotalTransfersIn())
+                        .subtract(totals.getTotalTransfersOut());
+
+        return new AccountBalanceResponse(
+                account.getId(),
+                account.getName(),
+                account.getOpeningBalance(),
+                totals.getTotalIncome(),
+                totals.getTotalExpenses(),
+                totals.getTotalTransfersIn(),
+                totals.getTotalTransfersOut(),
+                currentBalance
+        );
+    }
+
+    private void validateUserExists(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new UserNotFoundException(userId);
+        }
+    }
+}
