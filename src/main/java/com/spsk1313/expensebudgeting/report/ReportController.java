@@ -1,5 +1,6 @@
 package com.spsk1313.expensebudgeting.report;
 
+import com.spsk1313.expensebudgeting.report.dto.BudgetStatusResponse;
 import com.spsk1313.expensebudgeting.report.dto.CategorySpendingResponse;
 import com.spsk1313.expensebudgeting.report.dto.MonthlySummaryResponse;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -41,6 +42,19 @@ public class ReportController {
     ) {
         List<CategorySpendingResponse> response =
                 reportService.getCategorySpending(userId, month);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/budgets")
+    public ResponseEntity<List<BudgetStatusResponse>> getBudgetStatus(
+            @PathVariable Long userId,
+            @RequestParam
+            @DateTimeFormat(pattern = "yyyy-MM")
+            YearMonth month
+    ) {
+        List<BudgetStatusResponse> response =
+                reportService.getBudgetStatus(userId, month);
 
         return ResponseEntity.ok(response);
     }
