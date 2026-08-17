@@ -1,0 +1,18 @@
+                                                          QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=3276.72..3276.73 rows=1 width=64) (actual time=24.870..24.871 rows=1 loops=1)
+   Buffers: shared hit=6897
+   ->  Nested Loop  (cost=0.00..3276.57 rows=14 width=13) (actual time=0.085..24.454 rows=2883 loops=1)
+         Join Filter: (a.id = t.account_id)
+         Rows Removed by Join Filter: 9925
+         Buffers: shared hit=6897
+         ->  Seq Scan on accounts a  (cost=0.00..12.75 rows=1 width=8) (actual time=0.022..0.024 rows=4 loops=1)
+               Filter: (user_id = 1)
+               Buffers: shared hit=1
+         ->  Seq Scan on transactions t  (cost=0.00..3224.00 rows=3186 width=21) (actual time=0.004..5.946 rows=3202 loops=4)
+               Filter: ((transaction_date >= '2026-08-01'::date) AND (transaction_date < '2026-09-01'::date))
+               Rows Removed by Filter: 96798
+               Buffers: shared hit=6896
+ Planning Time: 0.330 ms
+ Execution Time: 24.920 ms
+(15 rows)

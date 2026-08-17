@@ -1,0 +1,21 @@
+                                                           QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=3508.31..3508.32 rows=1 width=64) (actual time=25.843..25.845 rows=1 loops=1)
+   Buffers: shared hit=1725
+   ->  Hash Join  (cost=12.76..3503.76 rows=454 width=13) (actual time=0.066..16.891 rows=89931 loops=1)
+         Hash Cond: (t.account_id = a.id)
+         Buffers: shared hit=1725
+         ->  Seq Scan on transactions t  (cost=0.00..3224.00 rows=99981 width=21) (actual time=0.013..8.756 rows=100000 loops=1)
+               Filter: ((transaction_date >= '2024-01-01'::date) AND (transaction_date < '2026-09-01'::date))
+               Buffers: shared hit=1724
+         ->  Hash  (cost=12.75..12.75 rows=1 width=8) (actual time=0.025..0.025 rows=4 loops=1)
+               Buckets: 1024  Batches: 1  Memory Usage: 9kB
+               Buffers: shared hit=1
+               ->  Seq Scan on accounts a  (cost=0.00..12.75 rows=1 width=8) (actual time=0.005..0.007 rows=4 loops=1)
+                     Filter: (user_id = 1)
+                     Buffers: shared hit=1
+ Planning:
+   Buffers: shared hit=207
+ Planning Time: 1.009 ms
+ Execution Time: 25.928 ms
+(18 rows)
