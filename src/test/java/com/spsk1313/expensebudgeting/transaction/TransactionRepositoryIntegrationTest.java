@@ -53,7 +53,7 @@ class TransactionRepositoryIntegrationTest {
     }
 
     @Test
-    void getMonthlyTotalsShouldAggregateIncomeAndExpensesWithinDateRange() {
+    void getTotalsByDateRangeShouldAggregateIncomeAndExpensesWithinDateRange() {
 
         User user = userRepository.save(
                 new User("Sahil", "sahil@example.com")
@@ -154,7 +154,7 @@ class TransactionRepositoryIntegrationTest {
         );
 
         MonthlyTotalsProjection totals =
-                transactionRepository.getMonthlyTotals(
+                transactionRepository.getTotalsByDateRange(
                         user.getId(),
                         LocalDate.of(2026, 8, 1),
                         LocalDate.of(2026, 9, 1)
@@ -174,14 +174,14 @@ class TransactionRepositoryIntegrationTest {
     }
 
     @Test
-    void getMonthlyTotalsWithNoTransactionsShouldReturnZeros() {
+    void getTotalsByDateRangeWithNoTransactionsShouldReturnZeros() {
 
         User user = userRepository.save(
                 new User("Sahil", "sahil@example.com")
         );
 
         MonthlyTotalsProjection totals =
-                transactionRepository.getMonthlyTotals(
+                transactionRepository.getTotalsByDateRange(
                         user.getId(),
                         LocalDate.of(2026, 9, 1),
                         LocalDate.of(2026, 10, 1)

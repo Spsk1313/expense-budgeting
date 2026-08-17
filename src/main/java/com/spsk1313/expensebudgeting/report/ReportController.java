@@ -2,11 +2,13 @@ package com.spsk1313.expensebudgeting.report;
 
 import com.spsk1313.expensebudgeting.report.dto.BudgetStatusResponse;
 import com.spsk1313.expensebudgeting.report.dto.CategorySpendingResponse;
+import com.spsk1313.expensebudgeting.report.dto.DateRangeSummaryResponse;
 import com.spsk1313.expensebudgeting.report.dto.MonthlySummaryResponse;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -55,6 +57,22 @@ public class ReportController {
     ) {
         List<BudgetStatusResponse> response =
                 reportService.getBudgetStatus(userId, month);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<DateRangeSummaryResponse> getDateRangeSummary(
+            @PathVariable Long userId,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate from,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate to
+    ) {
+        DateRangeSummaryResponse response =
+                reportService.getDateRangeSummary(userId, from, to);
 
         return ResponseEntity.ok(response);
     }

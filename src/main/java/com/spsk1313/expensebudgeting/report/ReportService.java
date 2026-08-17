@@ -4,7 +4,9 @@ import com.spsk1313.expensebudgeting.budget.Budget;
 import com.spsk1313.expensebudgeting.budget.BudgetRepository;
 import com.spsk1313.expensebudgeting.report.dto.BudgetStatusResponse;
 import com.spsk1313.expensebudgeting.report.dto.CategorySpendingResponse;
+import com.spsk1313.expensebudgeting.report.dto.DateRangeSummaryResponse;
 import com.spsk1313.expensebudgeting.report.dto.MonthlySummaryResponse;
+import com.spsk1313.expensebudgeting.report.exception.InvalidDateRangeException;
 import com.spsk1313.expensebudgeting.report.projection.CategorySpendingProjection;
 import com.spsk1313.expensebudgeting.report.projection.MonthlyTotalsProjection;
 import com.spsk1313.expensebudgeting.transaction.TransactionRepository;
@@ -22,7 +24,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 public class ReportService {
 
     private final UserRepository userRepository;
@@ -35,13 +37,12 @@ public class ReportService {
         this.budgetRepository = budgetRepository;
     }
 
-    @Transactional(readOnly = true)
     public MonthlySummaryResponse getMonthlySummary(Long userId, YearMonth month) {
         validateUserExists(userId);
         LocalDate startDate = month.atDay(1);
         LocalDate endDate = month.plusMonths(1).atDay(1);
 
-        MonthlyTotalsProjection totals = transactionRepository.getMonthlyTotals(userId, startDate, endDate);
+        MonthlyTotalsProjection totals = transactionRepository.getTotalsByDateRange(userId, startDate, endDate);
 
         BigDecimal totalIncome = totals.getTotalIncome();
         BigDecimal totalExpenses = totals.getTotalExpenses();
@@ -56,7 +57,6 @@ public class ReportService {
 
     }
 
-    @Transactional(readOnly = true)
     public List<CategorySpendingResponse> getCategorySpending(
             Long userId,
             YearMonth month
@@ -77,7 +77,6 @@ public class ReportService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
     public List<BudgetStatusResponse> getBudgetStatus(
             Long userId,
             YearMonth month
@@ -143,6 +142,41 @@ public class ReportService {
                     );
                 })
                 .toList();
+    }
+
+    public DateRangeSummaryResponse getDateRangeSummary(
+            Long userId,
+            LocalDate from,
+            LocalDate to
+    ) {
+        validateUserExists(userId);
+
+        if (from.isAfter(to)) {
+            throw new InvalidDateRangeException();
+        }
+
+        LocalDate endExclusive = to.plusDays(1);
+
+        MonthlyTotalsProjection totals =
+                transactionRepository.getTotalsByDateRange(
+                        userId,
+                        from,
+                        endExclusive
+                );
+
+        BigDecimal totalIncome = totals.getTotalIncome();
+        BigDecimal totalExpenses = totals.getTotalExpenses();
+
+        BigDecimal netCashFlow =
+                totalIncome.subtract(totalExpenses);
+
+        return new DateRangeSummaryResponse(
+                from,
+                to,
+                totalIncome,
+                totalExpenses,
+                netCashFlow
+        );
     }
 
     private void validateUserExists(Long userId) {

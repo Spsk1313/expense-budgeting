@@ -68,7 +68,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
           AND t.transactionDate >= :startDate
           AND t.transactionDate < :endDate
         """)
-    MonthlyTotalsProjection getMonthlyTotals(
+    MonthlyTotalsProjection getTotalsByDateRange(
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
