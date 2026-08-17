@@ -1,5 +1,6 @@
 package com.spsk1313.expensebudgeting.transaction;
 
+import com.spsk1313.expensebudgeting.report.projection.CategorySpendingProjection;
 import com.spsk1313.expensebudgeting.report.projection.MonthlyTotalsProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -68,6 +69,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
           AND t.transactionDate < :endDate
         """)
     MonthlyTotalsProjection getMonthlyTotals(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
+        SELECT t.category.id AS categoryId,
+               t.category.name AS categoryName,
+               SUM(t.amount) AS totalAmount
+        FROM Transaction t
+        WHERE t.account.user.id = :userId
+          AND t.type = com.spsk1313.expensebudgeting.transaction.TransactionType.EXPENSE
+          AND t.transactionDate >= :startDate
+          AND t.transactionDate < :endDate
+        GROUP BY t.category.id, t.category.name
+        ORDER BY SUM(t.amount) DESC
+        """)
+    List<CategorySpendingProjection> getCategorySpending(
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate

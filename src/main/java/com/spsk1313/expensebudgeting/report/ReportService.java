@@ -1,5 +1,6 @@
 package com.spsk1313.expensebudgeting.report;
 
+import com.spsk1313.expensebudgeting.report.dto.CategorySpendingResponse;
 import com.spsk1313.expensebudgeting.report.dto.MonthlySummaryResponse;
 import com.spsk1313.expensebudgeting.report.projection.MonthlyTotalsProjection;
 import com.spsk1313.expensebudgeting.transaction.TransactionRepository;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 
 @Service
 @Transactional
@@ -26,8 +28,7 @@ public class ReportService {
 
     @Transactional(readOnly = true)
     public MonthlySummaryResponse getMonthlySummary(Long userId, YearMonth month) {
-        if(!userRepository.existsById(userId)) throw new UserNotFoundException(userId);
-
+        validateUserExists(userId);
         LocalDate startDate = month.atDay(1);
         LocalDate endDate = month.plusMonths(1).atDay(1);
 
@@ -44,5 +45,32 @@ public class ReportService {
                 netCashFlow
         );
 
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategorySpendingResponse> getCategorySpending(
+            Long userId,
+            YearMonth month
+    ) {
+        validateUserExists(userId);
+
+        LocalDate startDate = month.atDay(1);
+        LocalDate endDate = month.plusMonths(1).atDay(1);
+
+        return transactionRepository
+                .getCategorySpending(userId, startDate, endDate)
+                .stream()
+                .map(projection -> new CategorySpendingResponse(
+                        projection.getCategoryId(),
+                        projection.getCategoryName(),
+                        projection.getTotalAmount()
+                ))
+                .toList();
+    }
+
+    private void validateUserExists(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new UserNotFoundException(userId);
+        }
     }
 }
